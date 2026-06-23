@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Home — Campus Connect</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+</head>
+<body class="home-page">
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="brand-icon-sm">💬</span>
+      <span class="nav-title">Campus Connect</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user">👤 {{ username }}</span>
+      <a href="/logout" class="btn btn-outline btn-sm">Logout</a>
+    </div>
+  </nav>
+
+  <div class="home-container">
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="home-grid">
+
+      <!-- Create Room Panel -->
+      <div class="panel">
+        <h2 class="panel-title">➕ Create a Room</h2>
+        <form method="POST" action="/home" class="create-form">
+          <div class="form-group">
+            <label for="room_name">Room Name</label>
+            <input type="text" id="room_name" name="room_name" placeholder="e.g. CS Study Group" required autocomplete="off"/>
+          </div>
+          <div class="form-group">
+            <label for="description">Description <span class="optional">(optional)</span></label>
+            <input type="text" id="description" name="description" placeholder="What's this room about?" autocomplete="off"/>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Create Room</button>
+        </form>
+      </div>
+
+      <!-- Rooms List Panel -->
+      <div class="panel rooms-panel">
+        <h2 class="panel-title">🏠 Available Rooms</h2>
+
+        {% if rooms %}
+          <div class="rooms-list">
+            {% for room in rooms %}
+              <div class="room-card">
+                <div class="room-info">
+                  <div class="room-name">{{ room.name }}</div>
+                  {% if room.description %}
+                    <div class="room-desc">{{ room.description }}</div>
+                  {% endif %}
+                  <div class="room-meta">Created by <strong>{{ room.creator.username }}</strong></div>
+                </div>
+                <a href="/room/{{ room.id }}" class="btn btn-join">Join</a>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-icon">💭</div>
+            <p>No rooms yet. Create the first one!</p>
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

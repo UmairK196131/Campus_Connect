@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ room.name }} — Campus Connect</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+</head>
+<body class="room-page">
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <a href="/home" class="back-btn">← Back</a>
+      <span class="nav-room-name">{{ room.name }}</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user">👤 {{ username }}</span>
+      <a href="/logout" class="btn btn-outline btn-sm">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Chat Container -->
+  <div class="chat-container">
+
+    <!-- Room Info Bar -->
+    <div class="room-info-bar">
+      <span class="room-title-bar">💬 {{ room.name }}</span>
+      {% if room.description %}
+        <span class="room-desc-bar">{{ room.description }}</span>
+      {% endif %}
+    </div>
+
+    <!-- Messages Area -->
+    <div class="messages-area" id="messages">
+      <div class="chat-welcome">
+        <p>Welcome to <strong>{{ room.name }}</strong>! Say hello 👋</p>
+      </div>
+
+      <!-- Saved message history loaded from database -->
+      {% for msg in history %}
+        <div class="message {{ 'mine' if msg.username == username else 'theirs' }}">
+          <div class="msg-header">
+            <span class="msg-username">{{ 'You' if msg.username == username else msg.username }}</span>
+            <span class="msg-time">{{ msg.created_at.strftime('%H:%M') }}</span>
+          </div>
+          <div class="msg-bubble">{{ msg.text }}</div>
+        </div>
+      {% endfor %}
+
+    </div>
+
+    <!-- Message Input -->
+    <div class="chat-input-area">
+      <input
+        type="text"
+        id="message-input"
+        class="message-input"
+        placeholder="Type your message and press Enter…"
+        autocomplete="off"
+        maxlength="500"
+      />
+      <button id="send-btn" class="btn btn-send">Send</button>
+    </div>
+
+  </div>
+
+  <!-- Hidden data for JS -->
+  <script>
+    const ROOM_ID   = "{{ room.id }}";
+    const USERNAME  = "{{ username }}";
+  </script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="{{ url_for('static', filename='chat.js') }}"></script>
+
+  <!-- Scroll to the latest message after history loads -->
+  <script>
+    window.onload = function () {
+      var msgs = document.getElementById('messages');
+      msgs.scrollTop = msgs.scrollHeight;
+    };
+  </script>
+
+</body>
+</html>
