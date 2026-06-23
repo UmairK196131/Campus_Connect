@@ -1,10 +1,13 @@
 // chat.js — Campus Connect real-time chat
 
+const SUPPORTED_EMOJIS = ['👍', '❤️', '😂'];
+
 const socket = io();
 const messagesEl  = document.getElementById('messages');
 const inputEl     = document.getElementById('message-input');
 const sendBtn     = document.getElementById('send-btn');
 const typingEl    = document.getElementById('typing-indicator');
+const activeCountEl = document.getElementById('active-count');
 
 let typingTimeout;
 let isTyping = false;
@@ -31,6 +34,17 @@ socket.on('user_stopped_typing', function (data) {
   updateTypingIndicator();
 });
 
+socket.on('active_users', function (data) {
+  activeCountEl.textContent = `● ${data.count} online`;
+});
+
+socket.on('reaction_update', function (data) {
+  const bar = document.querySelector(`.reaction-bar[data-message-id="${data.message_id}"]`);
+  if (!bar) return;
+  bar.innerHTML = '';
+  bar.appendChild(renderReactionButtons(data.reactions));
+});
+
 sendBtn.addEventListener('click', sendMessage);
 
 inputEl.addEventListener('keydown', function (e) {
@@ -51,6 +65,24 @@ inputEl.addEventListener('input', function () {
     isTyping = false;
     socket.emit('stop_typing', { room_id: ROOM_ID, username: USERNAME });
   }, 1500);
+});
+
+messagesEl.addEventListener('click', function (e) {
+  const btn = e.target.closest('.react-btn');
+  if (!btn) return;
+
+  const bar = btn.closest('.reaction-bar');
+  if (!bar) return;
+
+  const messageId = bar.dataset.messageId;
+  const emoji = btn.dataset.emoji;
+
+  socket.emit('react', {
+    room_id: ROOM_ID,
+    message_id: messageId,
+    username: USERNAME,
+    emoji: emoji
+  });
 });
 
 window.addEventListener('beforeunload', function () {
@@ -94,9 +126,33 @@ function appendMessage(data) {
       </div>
       <div class="msg-bubble">${escapeHtml(data.text)}</div>
     `;
+
+    const reactionBar = document.createElement('div');
+    reactionBar.className = 'reaction-bar';
+    reactionBar.dataset.messageId = data.id;
+    reactionBar.appendChild(renderReactionButtons({}));
+    wrapper.appendChild(reactionBar);
   }
 
   messagesEl.appendChild(wrapper);
+}
+
+function renderReactionButtons(reactionsObj) {
+  const frag = document.createDocumentFragment();
+
+  SUPPORTED_EMOJIS.forEach(function (emoji) {
+    const usersList = reactionsObj[emoji] || [];
+    const count = usersList.length;
+    const mine = usersList.includes(USERNAME);
+
+    const btn = document.createElement('button');
+    btn.className = 'react-btn' + (mine ? ' active' : '');
+    btn.dataset.emoji = emoji;
+    btn.textContent = count > 0 ? `${emoji} ${count}` : emoji;
+    frag.appendChild(btn);
+  });
+
+  return frag;
 }
 
 function updateTypingIndicator() {

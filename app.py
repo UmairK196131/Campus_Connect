@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_socketio import SocketIO, join_room, leave_room, send, emit
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Room, Message
+from models import db, User, Room, Message, Reaction
 from datetime import datetime
 import os
 
@@ -18,7 +18,13 @@ socketio = SocketIO(app, cors_allowed_origins='*', async_mode='gevent')
 with app.app_context():
     db.create_all()
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── In-memory online tracking ────────────────────────────────────────────────
+room_users = {}
+sid_info = {}
+
+SUPPORTED_EMOJIS = ['👍', '❤️', '😂']
+
+# ─── Helpers ───────────────────────────────────────────────────────────────────
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -31,7 +37,6 @@ def login_required(f):
 
 
 def format_message_time(dt):
-    """Returns '3:45 PM' for today's messages, or 'Jun 20, 3:45 PM' for older ones."""
     hour = dt.strftime('%I').lstrip('0') or '12'
     minute = dt.strftime('%M')
     ampm = dt.strftime('%p')
@@ -42,6 +47,14 @@ def format_message_time(dt):
 
     date_str = dt.strftime('%b %d')
     return f"{date_str}, {time_str}"
+
+
+def get_reaction_summary(message, current_username):
+    summary = {}
+    for emoji in SUPPORTED_EMOJIS:
+        users = [r.username for r in message.reactions if r.emoji == emoji]
+        summary[emoji] = {'count': len(users), 'mine': current_username in users}
+    return summary
 
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
@@ -152,13 +165,16 @@ def room(room_id):
     chat_room = Room.query.get_or_404(room_id)
     raw_messages = Message.query.filter_by(room_id=room_id).order_by(Message.created_at.asc()).limit(100).all()
 
+    current_username = session['username']
     history = [{
+        'id': m.id,
         'username': m.username,
         'text': m.text,
-        'time': format_message_time(m.created_at)
+        'time': format_message_time(m.created_at),
+        'reactions': get_reaction_summary(m, current_username)
     } for m in raw_messages]
 
-    return render_template('room.html', room=chat_room, username=session['username'], history=history)
+    return render_template('room.html', room=chat_room, username=current_username, history=history)
 
 
 # ─── Socket.IO Events ─────────────────────────────────────────────────────────
@@ -168,12 +184,18 @@ def handle_join(data):
     room_id  = str(data.get('room_id'))
     username = data.get('username')
     join_room(room_id)
+
+    sid_info[request.sid] = {'room_id': room_id, 'username': username}
+    room_users.setdefault(room_id, set()).add(username)
+
     emit('message', {
         'username': 'System',
         'text': f'{username} joined the chat.',
         'time': format_message_time(datetime.now()),
         'is_system': True
     }, to=room_id)
+
+    emit('active_users', {'count': len(room_users[room_id])}, to=room_id)
 
 
 @socketio.on('send_message')
@@ -190,6 +212,7 @@ def handle_message(data):
     db.session.commit()
 
     emit('message', {
+        'id': new_msg.id,
         'username': username,
         'text': text,
         'time': format_message_time(new_msg.created_at),
@@ -202,6 +225,35 @@ def handle_leave(data):
     room_id  = str(data.get('room_id'))
     username = data.get('username')
     leave_room(room_id)
+
+    if room_id in room_users:
+        room_users[room_id].discard(username)
+
+    sid_info.pop(request.sid, None)
+
+    emit('message', {
+        'username': 'System',
+        'text': f'{username} left the chat.',
+        'time': format_message_time(datetime.now()),
+        'is_system': True
+    }, to=room_id)
+
+    emit('active_users', {'count': len(room_users.get(room_id, []))}, to=room_id)
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    info = sid_info.pop(request.sid, None)
+    if not info:
+        return
+
+    room_id  = info['room_id']
+    username = info['username']
+
+    if room_id in room_users:
+        room_users[room_id].discard(username)
+
+    emit('active_users', {'count': len(room_users.get(room_id, []))}, to=room_id)
     emit('message', {
         'username': 'System',
         'text': f'{username} left the chat.',
@@ -222,6 +274,35 @@ def handle_stop_typing(data):
     room_id  = str(data.get('room_id'))
     username = data.get('username')
     emit('user_stopped_typing', {'username': username}, to=room_id, include_self=False)
+
+
+@socketio.on('react')
+def handle_reaction(data):
+    room_id    = str(data.get('room_id'))
+    message_id = int(data.get('message_id'))
+    username   = data.get('username')
+    emoji      = data.get('emoji')
+
+    if emoji not in SUPPORTED_EMOJIS:
+        return
+
+    existing = Reaction.query.filter_by(message_id=message_id, username=username, emoji=emoji).first()
+    if existing:
+        db.session.delete(existing)
+    else:
+        new_reaction = Reaction(message_id=message_id, username=username, emoji=emoji)
+        db.session.add(new_reaction)
+    db.session.commit()
+
+    all_reactions = Reaction.query.filter_by(message_id=message_id).all()
+    summary = {}
+    for r in all_reactions:
+        summary.setdefault(r.emoji, []).append(r.username)
+
+    emit('reaction_update', {
+        'message_id': message_id,
+        'reactions': summary
+    }, to=room_id)
 
 
 # ─── Run ──────────────────────────────────────────────────────────────────────

@@ -27,6 +27,7 @@
       {% if room.description %}
         <span class="room-desc-bar">{{ room.description }}</span>
       {% endif %}
+      <span class="active-count" id="active-count">● — online</span>
     </div>
 
     <div class="messages-area" id="messages">
@@ -41,6 +42,11 @@
             <span class="msg-time">{{ msg.time }}</span>
           </div>
           <div class="msg-bubble">{{ msg.text }}</div>
+          <div class="reaction-bar" data-message-id="{{ msg.id }}">
+            {% for emoji in ['👍', '❤️', '😂'] %}
+              <button class="react-btn{{ ' active' if msg.reactions[emoji].mine else '' }}" data-emoji="{{ emoji }}">{{ emoji }}{% if msg.reactions[emoji].count %} {{ msg.reactions[emoji].count }}{% endif %}</button>
+            {% endfor %}
+          </div>
         </div>
       {% endfor %}
 

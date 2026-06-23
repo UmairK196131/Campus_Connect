@@ -334,3 +334,44 @@ a:hover { color: var(--accent-h); }
 }
 .message-input:focus { border-color: var(--accent); }
 .message-input::placeholder { color: var(--text-muted); }
+/* ─── Typing Indicator ─────────────────────────────────────────────────────── */
+.typing-indicator {
+  min-height: 20px;
+  padding: 4px 4px 8px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+  display: none;
+}
+/* ─── Online Count ─────────────────────────────────────────────────────────── */
+.active-count {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--success);
+  font-weight: 500;
+}
+
+/* ─── Reaction Bar ─────────────────────────────────────────────────────────── */
+.reaction-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.react-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 2px 8px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.15s;
+}
+.react-btn:hover {
+  border-color: var(--accent);
+}
+.react-btn.active {
+  background: rgba(91,127,255,0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
