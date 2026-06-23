@@ -9,7 +9,6 @@
 </head>
 <body class="room-page">
 
-  <!-- Navbar -->
   <nav class="navbar">
     <div class="nav-brand">
       <a href="/home" class="back-btn">← Back</a>
@@ -21,10 +20,8 @@
     </div>
   </nav>
 
-  <!-- Chat Container -->
   <div class="chat-container">
 
-    <!-- Room Info Bar -->
     <div class="room-info-bar">
       <span class="room-title-bar">💬 {{ room.name }}</span>
       {% if room.description %}
@@ -32,18 +29,16 @@
       {% endif %}
     </div>
 
-    <!-- Messages Area -->
     <div class="messages-area" id="messages">
       <div class="chat-welcome">
         <p>Welcome to <strong>{{ room.name }}</strong>! Say hello 👋</p>
       </div>
 
-      <!-- Saved message history loaded from database -->
       {% for msg in history %}
         <div class="message {{ 'mine' if msg.username == username else 'theirs' }}">
           <div class="msg-header">
             <span class="msg-username">{{ 'You' if msg.username == username else msg.username }}</span>
-            <span class="msg-time">{{ msg.created_at.strftime('%H:%M') }}</span>
+            <span class="msg-time">{{ msg.time }}</span>
           </div>
           <div class="msg-bubble">{{ msg.text }}</div>
         </div>
@@ -51,7 +46,8 @@
 
     </div>
 
-    <!-- Message Input -->
+    <div class="typing-indicator" id="typing-indicator"></div>
+
     <div class="chat-input-area">
       <input
         type="text"
@@ -66,15 +62,12 @@
 
   </div>
 
-  <!-- Hidden data for JS -->
   <script>
     const ROOM_ID   = "{{ room.id }}";
     const USERNAME  = "{{ username }}";
   </script>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="{{ url_for('static', filename='chat.js') }}"></script>
-
-  <!-- Scroll to the latest message after history loads -->
   <script>
     window.onload = function () {
       var msgs = document.getElementById('messages');

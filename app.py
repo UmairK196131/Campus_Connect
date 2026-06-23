@@ -18,7 +18,7 @@ socketio = SocketIO(app, cors_allowed_origins='*', async_mode='gevent')
 with app.app_context():
     db.create_all()
 
-# ─── Helper ───────────────────────────────────────────────────────────────────
+# ─── Helpers ──────────────────────────────────────────────────────────────────
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -28,6 +28,21 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
+
+
+def format_message_time(dt):
+    """Returns '3:45 PM' for today's messages, or 'Jun 20, 3:45 PM' for older ones."""
+    hour = dt.strftime('%I').lstrip('0') or '12'
+    minute = dt.strftime('%M')
+    ampm = dt.strftime('%p')
+    time_str = f"{hour}:{minute} {ampm}"
+
+    if dt.date() == datetime.now().date():
+        return time_str
+
+    date_str = dt.strftime('%b %d')
+    return f"{date_str}, {time_str}"
+
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
@@ -135,7 +150,14 @@ def home():
 @login_required
 def room(room_id):
     chat_room = Room.query.get_or_404(room_id)
-    history   = Message.query.filter_by(room_id=room_id).order_by(Message.created_at.asc()).limit(100).all()
+    raw_messages = Message.query.filter_by(room_id=room_id).order_by(Message.created_at.asc()).limit(100).all()
+
+    history = [{
+        'username': m.username,
+        'text': m.text,
+        'time': format_message_time(m.created_at)
+    } for m in raw_messages]
+
     return render_template('room.html', room=chat_room, username=session['username'], history=history)
 
 
@@ -149,7 +171,7 @@ def handle_join(data):
     emit('message', {
         'username': 'System',
         'text': f'{username} joined the chat.',
-        'time': datetime.now().strftime('%H:%M'),
+        'time': format_message_time(datetime.now()),
         'is_system': True
     }, to=room_id)
 
@@ -170,7 +192,7 @@ def handle_message(data):
     emit('message', {
         'username': username,
         'text': text,
-        'time': datetime.now().strftime('%H:%M'),
+        'time': format_message_time(new_msg.created_at),
         'is_system': False
     }, to=room_id)
 
@@ -183,9 +205,23 @@ def handle_leave(data):
     emit('message', {
         'username': 'System',
         'text': f'{username} left the chat.',
-        'time': datetime.now().strftime('%H:%M'),
+        'time': format_message_time(datetime.now()),
         'is_system': True
     }, to=room_id)
+
+
+@socketio.on('typing')
+def handle_typing(data):
+    room_id  = str(data.get('room_id'))
+    username = data.get('username')
+    emit('user_typing', {'username': username}, to=room_id, include_self=False)
+
+
+@socketio.on('stop_typing')
+def handle_stop_typing(data):
+    room_id  = str(data.get('room_id'))
+    username = data.get('username')
+    emit('user_stopped_typing', {'username': username}, to=room_id, include_self=False)
 
 
 # ─── Run ──────────────────────────────────────────────────────────────────────

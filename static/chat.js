@@ -4,20 +4,35 @@ const socket = io();
 const messagesEl  = document.getElementById('messages');
 const inputEl     = document.getElementById('message-input');
 const sendBtn     = document.getElementById('send-btn');
+const typingEl    = document.getElementById('typing-indicator');
 
-// ─── Join the room on page load ───────────────────────────────────────────────
+let typingTimeout;
+let isTyping = false;
+const typingUsers = new Set();
+
 socket.emit('join', { room_id: ROOM_ID, username: USERNAME });
 
-// ─── Receive messages ─────────────────────────────────────────────────────────
 socket.on('message', function (data) {
+  if (!data.is_system) {
+    typingUsers.delete(data.username);
+    updateTypingIndicator();
+  }
   appendMessage(data);
   scrollToBottom();
 });
 
-// ─── Send message on button click ─────────────────────────────────────────────
+socket.on('user_typing', function (data) {
+  typingUsers.add(data.username);
+  updateTypingIndicator();
+});
+
+socket.on('user_stopped_typing', function (data) {
+  typingUsers.delete(data.username);
+  updateTypingIndicator();
+});
+
 sendBtn.addEventListener('click', sendMessage);
 
-// ─── Send message on Enter key ────────────────────────────────────────────────
 inputEl.addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -25,12 +40,23 @@ inputEl.addEventListener('keydown', function (e) {
   }
 });
 
-// ─── Leave room when navigating away ─────────────────────────────────────────
-window.addEventListener('beforeunload', function () {
-  socket.emit('leave', { room_id: ROOM_ID, username: USERNAME });
+inputEl.addEventListener('input', function () {
+  if (!isTyping) {
+    isTyping = true;
+    socket.emit('typing', { room_id: ROOM_ID, username: USERNAME });
+  }
+
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(function () {
+    isTyping = false;
+    socket.emit('stop_typing', { room_id: ROOM_ID, username: USERNAME });
+  }, 1500);
 });
 
-// ─── Functions ────────────────────────────────────────────────────────────────
+window.addEventListener('beforeunload', function () {
+  socket.emit('leave', { room_id: ROOM_ID, username: USERNAME });
+  socket.emit('stop_typing', { room_id: ROOM_ID, username: USERNAME });
+});
 
 function sendMessage() {
   const text = inputEl.value.trim();
@@ -44,6 +70,10 @@ function sendMessage() {
 
   inputEl.value = '';
   inputEl.focus();
+
+  clearTimeout(typingTimeout);
+  isTyping = false;
+  socket.emit('stop_typing', { room_id: ROOM_ID, username: USERNAME });
 }
 
 function appendMessage(data) {
@@ -67,6 +97,24 @@ function appendMessage(data) {
   }
 
   messagesEl.appendChild(wrapper);
+}
+
+function updateTypingIndicator() {
+  const names = Array.from(typingUsers);
+
+  if (names.length === 0) {
+    typingEl.textContent = '';
+    typingEl.style.display = 'none';
+  } else if (names.length === 1) {
+    typingEl.textContent = `${names[0]} is typing...`;
+    typingEl.style.display = 'block';
+  } else if (names.length === 2) {
+    typingEl.textContent = `${names[0]} and ${names[1]} are typing...`;
+    typingEl.style.display = 'block';
+  } else {
+    typingEl.textContent = `Several people are typing...`;
+    typingEl.style.display = 'block';
+  }
 }
 
 function scrollToBottom() {
