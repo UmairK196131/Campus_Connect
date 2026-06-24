@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="theme-color" content="#14121f"/>
+  <meta name="theme-color" content="#0a0a18"/>
   <title>{{ room.name }} — Campus Connect</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -62,33 +62,55 @@
       <!-- Saved message history loaded from database -->
       {% for msg in history %}
         {% if msg.username == username %}
-          <div class="message mine">
+          <div class="message mine" data-msg-id="{{ msg.id }}">
             <div class="message-content">
               <div class="msg-header">
                 <span class="msg-username">You</span>
                 <span class="msg-time">{{ msg.time }}</span>
               </div>
+              {% if msg.reply_to %}
+                <div class="reply-quote" data-jump-to="{{ msg.reply_to.id }}">
+                  <span class="reply-quote-user">{{ msg.reply_to.username }}</span>
+                  <span class="reply-quote-text">{{ msg.reply_to.text }}</span>
+                </div>
+              {% endif %}
               <div class="msg-bubble">{{ msg.text }}</div>
               <div class="reaction-bar" data-message-id="{{ msg.id }}">
                 {% for emoji in ['👍', '❤️', '😂'] %}
                   <button class="react-btn{{ ' active' if msg.reactions[emoji].mine else '' }}" data-emoji="{{ emoji }}">{{ emoji }}{% if msg.reactions[emoji].count %} {{ msg.reactions[emoji].count }}{% endif %}</button>
                 {% endfor %}
+                <button class="reply-btn" data-username="{{ msg.username }}" data-text="{{ msg.text }}" title="Reply">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 14 4 9l5-5M4 9h10a5 5 0 0 1 5 5v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
         {% else %}
-          <div class="message theirs">
-            <div class="avatar" data-bg="{{ color_for_name(msg.username) }}">{{ msg.username[0]|upper }}</div>
+          <div class="message theirs" data-msg-id="{{ msg.id }}">
+            <div class="avatar" data-avatar-color="{{ color_for_name(msg.username) }}">{{ msg.username[0]|upper }}</div>
             <div class="message-content">
               <div class="msg-header">
                 <span class="msg-username">{{ msg.username }}</span>
                 <span class="msg-time">{{ msg.time }}</span>
               </div>
+              {% if msg.reply_to %}
+                <div class="reply-quote" data-jump-to="{{ msg.reply_to.id }}">
+                  <span class="reply-quote-user">{{ msg.reply_to.username }}</span>
+                  <span class="reply-quote-text">{{ msg.reply_to.text }}</span>
+                </div>
+              {% endif %}
               <div class="msg-bubble">{{ msg.text }}</div>
               <div class="reaction-bar" data-message-id="{{ msg.id }}">
                 {% for emoji in ['👍', '❤️', '😂'] %}
                   <button class="react-btn{{ ' active' if msg.reactions[emoji].mine else '' }}" data-emoji="{{ emoji }}">{{ emoji }}{% if msg.reactions[emoji].count %} {{ msg.reactions[emoji].count }}{% endif %}</button>
                 {% endfor %}
+                <button class="reply-btn" data-username="{{ msg.username }}" data-text="{{ msg.text }}" title="Reply">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 14 4 9l5-5M4 9h10a5 5 0 0 1 5 5v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -100,6 +122,15 @@
     <!-- Typing Indicator -->
     <div class="typing-indicator" id="typing-indicator">
       <span id="typing-text"></span><span class="typing-dots"><i></i><i></i><i></i></span>
+    </div>
+
+    <!-- Reply Banner (shown when composing a reply) -->
+    <div class="reply-banner" id="reply-banner" style="display:none;">
+      <div class="reply-banner-content">
+        <span class="reply-banner-label">Replying to <strong id="reply-banner-username"></strong></span>
+        <span class="reply-banner-text" id="reply-banner-text"></span>
+      </div>
+      <button class="reply-banner-cancel" id="reply-banner-cancel" aria-label="Cancel reply" type="button">✕</button>
     </div>
 
     <!-- Message Input -->
@@ -135,9 +166,6 @@
     window.onload = function () {
       var msgs = document.getElementById('messages');
       msgs.scrollTop = msgs.scrollHeight;
-      document.querySelectorAll('.avatar[data-bg]').forEach(function(el) {
-        el.style.background = el.dataset.bg;
-      });
     };
   </script>
 

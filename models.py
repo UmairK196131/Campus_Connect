@@ -34,11 +34,15 @@ class Room(db.Model):
 class Message(db.Model):
     __tablename__ = 'messages'
 
-    id         = db.Column(db.Integer, primary_key=True)
-    text       = db.Column(db.String(500), nullable=False)
-    username   = db.Column(db.String(50), nullable=False)
-    room_id    = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    id          = db.Column(db.Integer, primary_key=True)
+    text        = db.Column(db.String(500), nullable=False)
+    username    = db.Column(db.String(50), nullable=False)
+    room_id     = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=False)
+    created_at  = db.Column(db.DateTime, default=datetime.now)
+
+    # Self-referential: a message can be a reply to another message in the same room
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('messages.id'), nullable=True)
+    reply_to    = db.relationship('Message', remote_side=[id])
 
     reactions = db.relationship('Reaction', backref='message', lazy=True, cascade='all, delete-orphan')
 

@@ -1,38 +1,38 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Campus Connect — "Night Library" theme
-   A warm desk-lamp accent against a deep indigo backdrop. Built for late-night
-   study sessions: calm, legible, and a little cozy.
+   Campus Connect — "Deep Space" theme
+   A quiet night sky behind every screen: drifting stars, a nebula glow on
+   sign-in, and a cool violet accent throughout.
 ───────────────────────────────────────────────────────────────────────────── */
 
 :root {
   /* Surfaces */
-  --bg:           #14121f;
-  --bg-elevated:  #1c1930;
-  --bg-surface:   #221d3a;
-  --border:       #2f2a47;
-  --border-soft:  #262140;
+  --bg:           #0a0a18;
+  --bg-elevated:  #12112a;
+  --bg-surface:   #191736;
+  --border:       #2b2750;
+  --border-soft:  #201d44;
 
-  /* Primary accent — warm lamp glow */
-  --accent:        #f0a857;
-  --accent-strong: #ffbf73;
-  --accent-soft:   rgba(240, 168, 87, 0.14);
+  /* Primary accent — nebula violet */
+  --accent:        #8b5cf6;
+  --accent-strong: #a78bfa;
+  --accent-soft:   rgba(139, 92, 246, 0.16);
 
-  /* Supporting palette (also used for avatar/room colors) */
-  --teal:        #6fe7c0;
-  --rose:        #f2789a;
-  --periwinkle:  #8ea0ff;
-  --sage:        #9ad18f;
-  --coral:       #ff8a65;
+  /* Supporting palette (avatars, room colors) */
+  --cyan:   #22d3ee;
+  --pink:   #f472b6;
+  --blue:   #60a5fa;
+  --aurora: #34d399;
+  --comet:  #fb923c;
 
   /* Text */
-  --text:        #f4efe9;
-  --text-muted:  #a79fc0;
-  --text-faint:  #6f6788;
+  --text:        #eef0fb;
+  --text-muted:  #9a96c4;
+  --text-faint:  #5f5b8a;
 
   /* Semantic */
-  --success: #6fe7c0;
-  --danger:  #ff7a85;
-  --warning: #f0a857;
+  --success: var(--aurora);
+  --danger:  #fb7185;
+  --warning: var(--comet);
 
   /* Shape */
   --radius-lg: 18px;
@@ -41,7 +41,7 @@
   --radius-pill: 999px;
 
   /* Shadow */
-  --shadow-soft: 0 8px 30px rgba(0,0,0,0.35);
+  --shadow-soft: 0 8px 30px rgba(0,0,0,0.45);
 
   /* Type */
   --font-display: 'Sora', sans-serif;
@@ -53,11 +53,60 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
+  position: relative;
   font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Starfield (site-wide, behind everything) ───────────────────────────────── */
+body::before, body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-repeat: repeat;
+}
+body::before {
+  background-image:
+    radial-gradient(1.4px 1.4px at 15% 20%, #ffffff 60%, transparent),
+    radial-gradient(1px 1px at 45% 65%, #ffffff 60%, transparent),
+    radial-gradient(1.6px 1.6px at 70% 30%, #ffffff 60%, transparent),
+    radial-gradient(1px 1px at 85% 80%, #ffffff 60%, transparent),
+    radial-gradient(1.2px 1.2px at 25% 85%, #ffffff 60%, transparent),
+    radial-gradient(1px 1px at 60% 10%, #ffffff 60%, transparent),
+    radial-gradient(1.4px 1.4px at 95% 50%, #ffffff 60%, transparent),
+    radial-gradient(1px 1px at 5% 50%, #ffffff 60%, transparent);
+  background-size: 220px 220px;
+  opacity: 0.35;
+  animation: drift-far 200s linear infinite;
+}
+body::after {
+  background-image:
+    radial-gradient(1.8px 1.8px at 10% 10%, #c9d2ff 70%, transparent),
+    radial-gradient(1.5px 1.5px at 50% 40%, #c9d2ff 70%, transparent),
+    radial-gradient(2px 2px at 80% 75%, #c9d2ff 70%, transparent),
+    radial-gradient(1.5px 1.5px at 30% 90%, #c9d2ff 70%, transparent),
+    radial-gradient(1.8px 1.8px at 65% 15%, #c9d2ff 70%, transparent),
+    radial-gradient(1.5px 1.5px at 90% 55%, #c9d2ff 70%, transparent);
+  background-size: 320px 320px;
+  opacity: 0.5;
+  animation: drift-near 130s linear infinite, twinkle 4s ease-in-out infinite;
+}
+@keyframes drift-far {
+  from { background-position: 0 0; }
+  to   { background-position: -220px 220px; }
+}
+@keyframes drift-near {
+  from { background-position: 0 0; }
+  to   { background-position: 320px -320px; }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 0.85; }
 }
 
 a { color: var(--accent); text-decoration: none; }
@@ -92,9 +141,9 @@ a:hover { color: var(--accent-strong); }
   font-size: 0.875rem;
   font-weight: 500;
 }
-.alert-success { background: rgba(111,231,192,0.12); color: var(--success); border: 1px solid rgba(111,231,192,0.28); }
-.alert-error   { background: rgba(255,122,133,0.12); color: var(--danger);  border: 1px solid rgba(255,122,133,0.28); }
-.alert-warning { background: var(--accent-soft);     color: var(--warning); border: 1px solid rgba(240,168,87,0.28); }
+.alert-success { background: rgba(52,211,153,0.12);  color: var(--success); border: 1px solid rgba(52,211,153,0.28); }
+.alert-error   { background: rgba(251,113,133,0.12); color: var(--danger);  border: 1px solid rgba(251,113,133,0.28); }
+.alert-warning { background: rgba(251,146,60,0.12);  color: var(--warning); border: 1px solid rgba(251,146,60,0.28); }
 
 /* ─── Buttons ─────────────────────────────────────────────────────────────────── */
 .btn {
@@ -114,7 +163,7 @@ a:hover { color: var(--accent-strong); }
 }
 .btn-primary {
   background: var(--accent);
-  color: #1a1430;
+  color: #fff;
 }
 .btn-primary:hover { background: var(--accent-strong); transform: translateY(-1px); }
 .btn-full { width: 100%; }
@@ -128,7 +177,7 @@ a:hover { color: var(--accent-strong); }
 .btn-join {
   background: var(--accent-soft);
   color: var(--accent-strong);
-  border: 1px solid rgba(240,168,87,0.3);
+  border: 1px solid rgba(139,92,246,0.3);
   padding: 8px 18px;
   border-radius: var(--radius-sm);
   font-weight: 600;
@@ -136,10 +185,10 @@ a:hover { color: var(--accent-strong); }
   white-space: nowrap;
   transition: all 0.2s;
 }
-.btn-join:hover { background: var(--accent); color: #1a1430; }
+.btn-join:hover { background: var(--accent); color: #fff; }
 .btn-send {
   background: var(--accent);
-  color: #1a1430;
+  color: #fff;
   padding: 12px 22px;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
@@ -185,14 +234,17 @@ a:hover { color: var(--accent-strong); }
 .auth-page::before {
   content: '';
   position: absolute;
-  top: -260px;
+  top: -220px;
   left: 50%;
-  width: 640px;
-  height: 640px;
+  width: 700px;
+  height: 700px;
   transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(240,168,87,0.20) 0%, rgba(240,168,87,0.06) 45%, transparent 70%);
-  filter: blur(10px);
+  background:
+    radial-gradient(circle at 35% 35%, rgba(139,92,246,0.28) 0%, transparent 55%),
+    radial-gradient(circle at 65% 55%, rgba(34,211,238,0.18) 0%, transparent 55%);
+  filter: blur(20px);
   pointer-events: none;
+  z-index: 0;
 }
 .auth-card {
   position: relative;
@@ -380,15 +432,15 @@ a:hover { color: var(--accent-strong); }
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--teal);
+  background: var(--cyan);
   display: inline-block;
   margin-right: 6px;
   animation: pulse 2s infinite;
 }
 @keyframes pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(111,231,192,0.45); }
-  70%  { box-shadow: 0 0 0 6px rgba(111,231,192,0); }
-  100% { box-shadow: 0 0 0 0 rgba(111,231,192,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(34,211,238,0.45); }
+  70%  { box-shadow: 0 0 0 6px rgba(34,211,238,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,211,238,0); }
 }
 
 /* ─── Messages Area ─────────────────────────────────────────────────────────── */
@@ -404,7 +456,7 @@ a:hover { color: var(--accent-strong); }
   text-align: center;
   padding: 12px 20px;
   background: var(--accent-soft);
-  border: 1px dashed rgba(240,168,87,0.3);
+  border: 1px dashed rgba(139,92,246,0.3);
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -425,6 +477,7 @@ a:hover { color: var(--accent-strong); }
   display: flex;
   flex-direction: column;
   min-width: 0;
+  max-width: 100%;
 }
 .message.mine   .message-content { align-items: flex-end; }
 .message.theirs .message-content { align-items: flex-start; }
@@ -439,7 +492,7 @@ a:hover { color: var(--accent-strong); }
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 0.78rem;
-  color: #1a1430;
+  color: #0a0a18;
   flex-shrink: 0;
   margin-top: 3px;
 }
@@ -452,7 +505,7 @@ a:hover { color: var(--accent-strong); }
   gap: 6px;
   font-family: var(--font-mono);
 }
-.msg-username { font-weight: 600; color: var(--accent); font-family: var(--font-body); }
+.msg-username { font-weight: 600; color: var(--accent-strong); font-family: var(--font-body); }
 
 .msg-bubble {
   padding: 10px 14px;
@@ -461,7 +514,7 @@ a:hover { color: var(--accent-strong); }
   line-height: 1.5;
   word-break: break-word;
 }
-.message.mine   .msg-bubble { background: var(--accent); color: #1a1430; border-bottom-right-radius: 4px; }
+.message.mine   .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
 .message.theirs .msg-bubble { background: var(--bg-surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
 .message.system .msg-bubble {
   background: transparent;
@@ -472,14 +525,80 @@ a:hover { color: var(--accent-strong); }
   padding: 2px 0;
 }
 
+/* Highlight flash when jumping to a message via a reply-quote click */
+.message.highlight .msg-bubble {
+  animation: highlightFlash 1.2s ease;
+}
+@keyframes highlightFlash {
+  0%   { box-shadow: 0 0 0 2px var(--accent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── Reply Quote (shown inside a message that is replying to another) ───────── */
+.reply-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border-left: 3px solid var(--accent);
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  max-width: 100%;
+}
+.reply-quote:hover { background: rgba(255,255,255,0.08); }
+.reply-quote-user { font-weight: 600; color: var(--accent-strong); }
+.reply-quote-text { color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.message.mine .reply-quote {
+  background: rgba(255,255,255,0.15);
+  border-left-color: rgba(255,255,255,0.6);
+}
+.message.mine .reply-quote-user { color: #fff; }
+.message.mine .reply-quote-text { color: rgba(255,255,255,0.85); }
+
+/* ─── Reply Banner (above the input, while composing a reply) ────────────────── */
+.reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  margin-top: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  animation: fadeIn 0.15s ease;
+}
+.reply-banner-content { display: flex; flex-direction: column; gap: 1px; min-width: 0; overflow: hidden; }
+.reply-banner-label { font-size: 0.76rem; color: var(--text-muted); }
+.reply-banner-label strong { color: var(--accent-strong); }
+.reply-banner-text { font-size: 0.8rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reply-banner-cancel {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.reply-banner-cancel:hover { color: var(--danger); background: rgba(251,113,133,0.1); }
+
 /* ─── Reaction Bar ─────────────────────────────────────────────────────────── */
 .reaction-bar {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-top: 5px;
 }
@@ -499,6 +618,19 @@ a:hover { color: var(--accent-strong); }
   border-color: var(--accent);
   color: var(--accent-strong);
 }
+
+.reply-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+.reply-btn:hover { background: var(--bg-surface); color: var(--accent); }
 
 /* ─── Typing Indicator ─────────────────────────────────────────────────────── */
 .typing-indicator {

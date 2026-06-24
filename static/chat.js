@@ -1,7 +1,7 @@
 // chat.js — Campus Connect real-time chat
 
 const SUPPORTED_EMOJIS = ['👍', '❤️', '😂'];
-const AVATAR_PALETTE = ['#f0a857', '#6fe7c0', '#f2789a', '#8ea0ff', '#9ad18f', '#ff8a65'];
+const AVATAR_PALETTE = ['#8b5cf6', '#22d3ee', '#f472b6', '#60a5fa', '#34d399', '#fb923c'];
 
 function colorForName(name) {
   let total = 0;
@@ -17,10 +17,16 @@ const typingEl      = document.getElementById('typing-indicator');
 const typingTextEl  = document.getElementById('typing-text');
 const activeCountTextEl = document.getElementById('active-count-text');
 
-// ─── Typing State ──────────────────────────────────────────────────────────────
+const replyBanner         = document.getElementById('reply-banner');
+const replyBannerUsername = document.getElementById('reply-banner-username');
+const replyBannerText     = document.getElementById('reply-banner-text');
+const replyBannerCancel   = document.getElementById('reply-banner-cancel');
+
+// ─── State ─────────────────────────────────────────────────────────────────────
 let typingTimeout;
 let isTyping = false;
 const typingUsers = new Set();
+let replyingTo = null; // { id, username, text }
 
 // ─── Join the room on page load ───────────────────────────────────────────────
 socket.emit('join', { room_id: ROOM_ID, username: USERNAME });
@@ -55,8 +61,13 @@ socket.on('active_users', function (data) {
 socket.on('reaction_update', function (data) {
   const bar = document.querySelector(`.reaction-bar[data-message-id="${data.message_id}"]`);
   if (!bar) return;
+
+  const owner = getMessageOwner(bar);
+  const text  = getMessageText(bar);
+
   bar.innerHTML = '';
   bar.appendChild(renderReactionButtons(data.reactions));
+  bar.appendChild(buildReplyButton(owner, text));
 });
 
 // ─── Send message on button click ─────────────────────────────────────────────
@@ -84,24 +95,50 @@ inputEl.addEventListener('input', function () {
   }, 1500);
 });
 
-// ─── Reaction button clicks (event delegation — works for history AND new messages) ──
+// ─── Click handling inside the messages list (event delegation) ──────────────
+// Covers: reaction buttons, reply buttons, and clicking a quoted reply to jump to it.
 messagesEl.addEventListener('click', function (e) {
-  const btn = e.target.closest('.react-btn');
-  if (!btn) return;
+  const replyBtn = e.target.closest('.reply-btn');
+  if (replyBtn) {
+    const bar = replyBtn.closest('.reaction-bar');
+    replyingTo = {
+      id: bar ? bar.dataset.messageId : null,
+      username: replyBtn.dataset.username,
+      text: replyBtn.dataset.text
+    };
+    showReplyBanner();
+    inputEl.focus();
+    return;
+  }
 
-  const bar = btn.closest('.reaction-bar');
+  const quote = e.target.closest('.reply-quote');
+  if (quote) {
+    const targetId = quote.dataset.jumpTo;
+    const target = document.querySelector(`.message[data-msg-id="${targetId}"]`);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('highlight');
+      setTimeout(function () { target.classList.remove('highlight'); }, 1200);
+    }
+    return;
+  }
+
+  const reactBtn = e.target.closest('.react-btn');
+  if (!reactBtn) return;
+
+  const bar = reactBtn.closest('.reaction-bar');
   if (!bar) return;
-
-  const messageId = bar.dataset.messageId;
-  const emoji = btn.dataset.emoji;
 
   socket.emit('react', {
     room_id: ROOM_ID,
-    message_id: messageId,
+    message_id: bar.dataset.messageId,
     username: USERNAME,
-    emoji: emoji
+    emoji: reactBtn.dataset.emoji
   });
 });
+
+// ─── Cancel reply ──────────────────────────────────────────────────────────────
+replyBannerCancel.addEventListener('click', clearReply);
 
 // ─── Leave room when navigating away ─────────────────────────────────────────
 window.addEventListener('beforeunload', function () {
@@ -116,17 +153,31 @@ function sendMessage() {
   if (!text) return;
 
   socket.emit('send_message', {
-    room_id:  ROOM_ID,
-    username: USERNAME,
-    text:     text
+    room_id:     ROOM_ID,
+    username:    USERNAME,
+    text:        text,
+    reply_to_id: replyingTo ? replyingTo.id : null
   });
 
   inputEl.value = '';
   inputEl.focus();
+  clearReply();
 
   clearTimeout(typingTimeout);
   isTyping = false;
   socket.emit('stop_typing', { room_id: ROOM_ID, username: USERNAME });
+}
+
+function showReplyBanner() {
+  replyBannerUsername.textContent = replyingTo.username;
+  const txt = replyingTo.text.length > 60 ? replyingTo.text.slice(0, 57) + '...' : replyingTo.text;
+  replyBannerText.textContent = txt;
+  replyBanner.style.display = 'flex';
+}
+
+function clearReply() {
+  replyingTo = null;
+  replyBanner.style.display = 'none';
 }
 
 function appendMessage(data) {
@@ -141,6 +192,7 @@ function appendMessage(data) {
 
   const isMe = data.username === USERNAME;
   wrapper.className = `message ${isMe ? 'mine' : 'theirs'}`;
+  wrapper.dataset.msgId = data.id;
 
   if (!isMe) {
     const avatar = document.createElement('div');
@@ -152,11 +204,23 @@ function appendMessage(data) {
 
   const content = document.createElement('div');
   content.className = 'message-content';
+
+  let replyQuoteHtml = '';
+  if (data.reply_to) {
+    replyQuoteHtml = `
+      <div class="reply-quote" data-jump-to="${data.reply_to.id}">
+        <span class="reply-quote-user">${escapeHtml(data.reply_to.username)}</span>
+        <span class="reply-quote-text">${escapeHtml(data.reply_to.text)}</span>
+      </div>
+    `;
+  }
+
   content.innerHTML = `
     <div class="msg-header">
       <span class="msg-username">${isMe ? 'You' : escapeHtml(data.username)}</span>
       <span class="msg-time">${escapeHtml(data.time)}</span>
     </div>
+    ${replyQuoteHtml}
     <div class="msg-bubble">${escapeHtml(data.text)}</div>
   `;
 
@@ -164,10 +228,32 @@ function appendMessage(data) {
   reactionBar.className = 'reaction-bar';
   reactionBar.dataset.messageId = data.id;
   reactionBar.appendChild(renderReactionButtons({}));
+  reactionBar.appendChild(buildReplyButton(data.username, data.text));
   content.appendChild(reactionBar);
 
   wrapper.appendChild(content);
   messagesEl.appendChild(wrapper);
+}
+
+function buildReplyButton(username, text) {
+  const btn = document.createElement('button');
+  btn.className = 'reply-btn';
+  btn.type = 'button';
+  btn.title = 'Reply';
+  btn.dataset.username = username;
+  btn.dataset.text = text;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 14 4 9l5-5M4 9h10a5 5 0 0 1 5 5v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return btn;
+}
+
+function getMessageOwner(reactionBar) {
+  const existing = reactionBar.querySelector('.reply-btn');
+  return existing ? existing.dataset.username : '';
+}
+
+function getMessageText(reactionBar) {
+  const existing = reactionBar.querySelector('.reply-btn');
+  return existing ? existing.dataset.text : '';
 }
 
 function renderReactionButtons(reactionsObj) {

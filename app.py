@@ -23,7 +23,9 @@ room_users = {}
 sid_info = {}
 
 SUPPORTED_EMOJIS = ['👍', '❤️', '😂']
-AVATAR_PALETTE = ['#f0a857', '#6fe7c0', '#f2789a', '#8ea0ff', '#9ad18f', '#ff8a65']
+
+# "Deep Space" palette — used for avatars and room accent colors
+AVATAR_PALETTE = ['#8b5cf6', '#22d3ee', '#f472b6', '#60a5fa', '#34d399', '#fb923c']
 
 
 def color_for_name(name):
@@ -67,6 +69,16 @@ def get_reaction_summary(message, current_username):
         users = [r.username for r in message.reactions if r.emoji == emoji]
         summary[emoji] = {'count': len(users), 'mine': current_username in users}
     return summary
+
+
+def get_reply_preview(message):
+    """Returns a short preview dict of the message being replied to, or None."""
+    if not message.reply_to_id or not message.reply_to:
+        return None
+
+    parent = message.reply_to
+    preview_text = parent.text if len(parent.text) <= 80 else parent.text[:77] + '...'
+    return {'id': parent.id, 'username': parent.username, 'text': preview_text}
 
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
@@ -183,7 +195,8 @@ def room(room_id):
         'username': m.username,
         'text': m.text,
         'time': format_message_time(m.created_at),
-        'reactions': get_reaction_summary(m, current_username)
+        'reactions': get_reaction_summary(m, current_username),
+        'reply_to': get_reply_preview(m)
     } for m in raw_messages]
 
     return render_template('room.html', room=chat_room, username=current_username, history=history)
@@ -212,14 +225,20 @@ def handle_join(data):
 
 @socketio.on('send_message')
 def handle_message(data):
-    room_id  = str(data.get('room_id'))
-    username = data.get('username')
-    text     = data.get('text', '').strip()
+    room_id     = str(data.get('room_id'))
+    username    = data.get('username')
+    text        = data.get('text', '').strip()
+    reply_to_id = data.get('reply_to_id')
 
     if not text:
         return
 
-    new_msg = Message(text=text, username=username, room_id=int(room_id))
+    new_msg = Message(
+        text=text,
+        username=username,
+        room_id=int(room_id),
+        reply_to_id=int(reply_to_id) if reply_to_id else None
+    )
     db.session.add(new_msg)
     db.session.commit()
 
@@ -228,7 +247,8 @@ def handle_message(data):
         'username': username,
         'text': text,
         'time': format_message_time(new_msg.created_at),
-        'is_system': False
+        'is_system': False,
+        'reply_to': get_reply_preview(new_msg)
     }, to=room_id)
 
 
