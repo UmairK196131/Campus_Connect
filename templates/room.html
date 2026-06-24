@@ -3,57 +3,106 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#14121f"/>
   <title>{{ room.name }} — Campus Connect</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 </head>
 <body class="room-page">
 
+  <!-- Navbar -->
   <nav class="navbar">
     <div class="nav-brand">
-      <a href="/home" class="back-btn">← Back</a>
+      <a href="/home" class="back-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 12H5M11 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Back
+      </a>
       <span class="nav-room-name">{{ room.name }}</span>
     </div>
     <div class="nav-right">
-      <span class="nav-user">👤 {{ username }}</span>
-      <a href="/logout" class="btn btn-outline btn-sm">Logout</a>
+      <span class="nav-user">
+        <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="label-text">{{ username }}</span>
+      </span>
+      <a href="/logout" class="btn btn-outline btn-sm">
+        <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Log out
+      </a>
     </div>
   </nav>
 
+  <!-- Chat Container -->
   <div class="chat-container">
 
+    <!-- Room Info Bar -->
     <div class="room-info-bar">
-      <span class="room-title-bar">💬 {{ room.name }}</span>
+      <span class="room-title-bar">{{ room.name }}</span>
       {% if room.description %}
         <span class="room-desc-bar">{{ room.description }}</span>
       {% endif %}
-      <span class="active-count" id="active-count">● — online</span>
+      <span class="active-count" id="active-count">
+        <span class="pulse-dot"></span><span id="active-count-text">— online</span>
+      </span>
     </div>
 
+    <!-- Messages Area -->
     <div class="messages-area" id="messages">
       <div class="chat-welcome">
         <p>Welcome to <strong>{{ room.name }}</strong>! Say hello 👋</p>
       </div>
 
+      <!-- Saved message history loaded from database -->
       {% for msg in history %}
-        <div class="message {{ 'mine' if msg.username == username else 'theirs' }}">
-          <div class="msg-header">
-            <span class="msg-username">{{ 'You' if msg.username == username else msg.username }}</span>
-            <span class="msg-time">{{ msg.time }}</span>
+        {% if msg.username == username %}
+          <div class="message mine">
+            <div class="message-content">
+              <div class="msg-header">
+                <span class="msg-username">You</span>
+                <span class="msg-time">{{ msg.time }}</span>
+              </div>
+              <div class="msg-bubble">{{ msg.text }}</div>
+              <div class="reaction-bar" data-message-id="{{ msg.id }}">
+                {% for emoji in ['👍', '❤️', '😂'] %}
+                  <button class="react-btn{{ ' active' if msg.reactions[emoji].mine else '' }}" data-emoji="{{ emoji }}">{{ emoji }}{% if msg.reactions[emoji].count %} {{ msg.reactions[emoji].count }}{% endif %}</button>
+                {% endfor %}
+              </div>
+            </div>
           </div>
-          <div class="msg-bubble">{{ msg.text }}</div>
-          <div class="reaction-bar" data-message-id="{{ msg.id }}">
-            {% for emoji in ['👍', '❤️', '😂'] %}
-              <button class="react-btn{{ ' active' if msg.reactions[emoji].mine else '' }}" data-emoji="{{ emoji }}">{{ emoji }}{% if msg.reactions[emoji].count %} {{ msg.reactions[emoji].count }}{% endif %}</button>
-            {% endfor %}
+        {% else %}
+          <div class="message theirs">
+            <div class="avatar" data-bg="{{ color_for_name(msg.username) }}">{{ msg.username[0]|upper }}</div>
+            <div class="message-content">
+              <div class="msg-header">
+                <span class="msg-username">{{ msg.username }}</span>
+                <span class="msg-time">{{ msg.time }}</span>
+              </div>
+              <div class="msg-bubble">{{ msg.text }}</div>
+              <div class="reaction-bar" data-message-id="{{ msg.id }}">
+                {% for emoji in ['👍', '❤️', '😂'] %}
+                  <button class="react-btn{{ ' active' if msg.reactions[emoji].mine else '' }}" data-emoji="{{ emoji }}">{{ emoji }}{% if msg.reactions[emoji].count %} {{ msg.reactions[emoji].count }}{% endif %}</button>
+                {% endfor %}
+              </div>
+            </div>
           </div>
-        </div>
+        {% endif %}
       {% endfor %}
 
     </div>
 
-    <div class="typing-indicator" id="typing-indicator"></div>
+    <!-- Typing Indicator -->
+    <div class="typing-indicator" id="typing-indicator">
+      <span id="typing-text"></span><span class="typing-dots"><i></i><i></i><i></i></span>
+    </div>
 
+    <!-- Message Input -->
     <div class="chat-input-area">
       <input
         type="text"
@@ -63,21 +112,32 @@
         autocomplete="off"
         maxlength="500"
       />
-      <button id="send-btn" class="btn btn-send">Send</button>
+      <button id="send-btn" class="btn btn-send">
+        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 11l18-8-8 18-2.5-7.5L3 11Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+        <span class="btn-label">Send</span>
+      </button>
     </div>
 
   </div>
 
+  <!-- Hidden data for JS -->
   <script>
     const ROOM_ID   = "{{ room.id }}";
     const USERNAME  = "{{ username }}";
   </script>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="{{ url_for('static', filename='chat.js') }}"></script>
+
+  <!-- Scroll to the latest message after history loads -->
   <script>
     window.onload = function () {
       var msgs = document.getElementById('messages');
       msgs.scrollTop = msgs.scrollHeight;
+      document.querySelectorAll('.avatar[data-bg]').forEach(function(el) {
+        el.style.background = el.dataset.bg;
+      });
     };
   </script>
 

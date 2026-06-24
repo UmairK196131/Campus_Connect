@@ -23,6 +23,16 @@ room_users = {}
 sid_info = {}
 
 SUPPORTED_EMOJIS = ['👍', '❤️', '😂']
+AVATAR_PALETTE = ['#f0a857', '#6fe7c0', '#f2789a', '#8ea0ff', '#9ad18f', '#ff8a65']
+
+
+def color_for_name(name):
+    """Deterministically maps any name/string to a color from the palette."""
+    total = sum(ord(c) for c in name)
+    return AVATAR_PALETTE[total % len(AVATAR_PALETTE)]
+
+
+app.jinja_env.globals['color_for_name'] = color_for_name
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 def login_required(f):
@@ -37,6 +47,7 @@ def login_required(f):
 
 
 def format_message_time(dt):
+    """Returns '3:45 PM' for today's messages, or 'Jun 20, 3:45 PM' for older ones."""
     hour = dt.strftime('%I').lstrip('0') or '12'
     minute = dt.strftime('%M')
     ampm = dt.strftime('%p')
@@ -50,6 +61,7 @@ def format_message_time(dt):
 
 
 def get_reaction_summary(message, current_username):
+    """Returns {'👍': {'count': 2, 'mine': True}, ...} for a Message object."""
     summary = {}
     for emoji in SUPPORTED_EMOJIS:
         users = [r.username for r in message.reactions if r.emoji == emoji]
@@ -243,6 +255,7 @@ def handle_leave(data):
 
 @socketio.on('disconnect')
 def handle_disconnect():
+    """Fallback cleanup if the browser closes without firing the 'leave' event."""
     info = sid_info.pop(request.sid, None)
     if not info:
         return
